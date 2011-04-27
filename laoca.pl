@@ -1,17 +1,17 @@
 % *******************************************************
 % 
-% El juego de la OCA gr·fica, Programado en Prolog + XPCE
-% Por: Alberto Fern·ndez MartÌnez, 1∫ de Ing. Inform·tica
-% Universidad de Alicante, LÛgica Computacional
+% El juego de la OCA gr√°fica, Programado en Prolog + XPCE
+% Por: Alberto Fern√°ndez Mart√≠nez, 1¬∫ de Ing. Inform√°tica
+% Universidad de Alicante, L√≥gica Computacional
 % 
 % *******************************************************
 
 
-% Cargamos las librerÌas XPCE
+% Cargamos las librer√≠as XPCE
 
 :- use_module(library(pce)).
 
-% Le indicamos el directorio base donde estar·n ubicadas las im·genes de
+% Le indicamos el directorio base donde estar√°n ubicadas las im√°genes de
 % nuestro programa, el tablero, los dados, las fichas, etc...
 
 :- pce_image_directory('./img/').
@@ -19,16 +19,16 @@
 % ******** OPERACIONES INICIALES ********
 % 
 % Limpiamos la pantalla y generamos los recursos que vamos a usar, la
-% imagen del tablero, los distintos men˙s, fondos, en defintiva, los
-% gr·ficos del programa
+% imagen del tablero, los distintos men√∫s, fondos, en defintiva, los
+% gr√°ficos del programa
 % 
 % ***************************************
 
 
 :- write('\033[2J').    
-:- write('[p] Creando im·genes...\n').
+:- write('[p] Creando im√°genes...\n').
 
-% Im·genes del men˙ principal
+% Im√°genes del men√∫ principal
 
 resource(menu, menu, image('menu_oca.jpg')).
 resource(salida, salida, image('salida.jpg')).
@@ -41,7 +41,7 @@ resource(instrucciones, instrucciones, image('instrucciones.jpg')).
 resource(ayuda_menu, ayudam, image('ayuda_menu.jpg')).
 resource(ayuda_back, ayudab, image('back_ayuda.jpg')).
 
-% Pantalla de configuraciÛn
+% Pantalla de configuraci√≥n
 
 resource(config, config, image('config.jpg')).
 
@@ -49,9 +49,9 @@ resource(config, config, image('config.jpg')).
 
 resource(instrucciones_v, image, image('instrucciones_v.jpg')).
 
-% Todas las im·genes de la pantalla de la OCA
+% Todas las im√°genes de la pantalla de la OCA
 
-:- write('[p] Creando im·genes de la OCA...\n').
+:- write('[p] Creando im√°genes de la OCA...\n').
 
 resource(tablero, image, image('tablero.jpg')).     
 resource(dado1, image, image('dado1.gif')).          
@@ -84,7 +84,7 @@ resource(fichaverde, image, image('ficha_verde.gif')).
 % ***************************************
 
 
-% Este predicado nos crear· una imagen a partir de un recurso.
+% Este predicado nos crear√° una imagen a partir de un recurso.
 
 imagen(Ventana, Figura, Imagen, Posicion) :-
 	new(Figura, figure),
@@ -94,8 +94,8 @@ imagen(Ventana, Figura, Imagen, Posicion) :-
 	send(Figura, status, 1),
 	send(Ventana, display, Figura, Posicion).
 
-% Un predicado auxiliar que devolver· 'Yes' siempre
-% ⁄til para evitar el warning de Singleton Variables y para los
+% Un predicado auxiliar que devolver√° 'Yes' siempre
+% √ötil para evitar el warning de Singleton Variables y para los
 % condicionales
 
 nada(_).
@@ -110,38 +110,38 @@ juntar(Cosa1, Cosa2, Cosa3, Cosa4, Cosa5, Cosa6, Resultado):-
 	atom_concat(Cosa44,Cosa6,Resultado).
 
 
-% ******** PREDICADOS DIN¡MICOS  ********
+% ******** PREDICADOS DIN√ÅMICOS  ********
 % 
-% Todos los predicados din·micos que vamos a usar en nuestro juego, con
-% un pequeÒo comentario como aclaraciÛn al lado
+% Todos los predicados din√°micos que vamos a usar en nuestro juego, con
+% un peque√±o comentario como aclaraci√≥n al lado
 % 
 % ***************************************
 
-:- write('[p] Creando predicados din·micos...\n').
+:- write('[p] Creando predicados din√°micos...\n').
 
 :-dynamic turno/1.             % Este predicado controlar el turno 
 :-dynamic ubicacion/2.         
 :-dynamic finDeJuego/0.           
-:-dynamic tiradas/1.           % Predicado para contabilizar el n˙mero de tiradas de una partida
-:-dynamic numjug/1.            % Predicado para controlar el n˙mero de jugadores de la partida
+:-dynamic tiradas/1.           % Predicado para contabilizar el n√∫mero de tiradas de una partida
+:-dynamic numjug/1.            % Predicado para controlar el n√∫mero de jugadores de la partida
 :-dynamic turnosSinJugar/2.    % Controla los turnos que va a estar sin jugar un jugador
 :-dynamic namejugador/3.       % Nombres de los jugadores
 
-% NOTA sobre namejugador/3: El tercer par·metro es para el color, pero
+% NOTA sobre namejugador/3: El tercer par√°metro es para el color, pero
 % no he podido implementarlo a tiempo
 
 
 % ******** PREDICADOS DEL INICIO ********
 % 
-% AquÌ est·n todos los predicados iniciales que cargan el men˙
+% Aqu√≠ est√°n todos los predicados iniciales que cargan el men√∫
 % principal, la pantalla de ayuda, la de instrucciones, el modo
-% configuraciÛn, etc...
+% configuraci√≥n, etc...
 % 
 % ***************************************
 
 
-% FunciÛn que resetear· todas las variables din·micas para crear un
-% juego nuevo independientemente de los anteriores. Se usar· en la
+% Funci√≥n que resetear√° todas las variables din√°micas para crear un
+% juego nuevo independientemente de los anteriores. Se usar√° en la
 % ventana de la OCA
 
 inicializar:-
@@ -163,8 +163,8 @@ inicializar:-
 	assert(turnosSinJugar(4, 0)),
 	retractall(carcel(_)).
 
-% Usaremos este predicado en todas las secciones del men˙ para liberar
-% las im·genes previas, etc... 
+% Usaremos este predicado en todas las secciones del men√∫ para liberar
+% las im√°genes previas, etc... 
 
 free_menu:-
 	free(@ayudam),
@@ -186,7 +186,7 @@ free_menu:-
 
 % Menu principal de la OCA. En un predicado que lanza al inicio en
 % cuanto compilamos nuestro programa
-:- write('[p] Lanzando men˙ principal...\n').
+:- write('[p] Lanzando men√∫ principal...\n').
 
 :-
 	
@@ -195,7 +195,7 @@ free_menu:-
 	retractall(namejugador(_, _, _)),
 	
 	% En los predicados que se ejecutan al principio hay que liberar las variables
-	% a mano, o tirar· error	
+	% a mano, o tirar√° error	
 	free(@menu),
 	free(@mprincipal),
 	free(@inst),
@@ -203,17 +203,17 @@ free_menu:-
 	free(@salir),
 	free(@config),
 	
-	new(Menu, window('El Juego de la OCA: Men˙ Principal', size(800, 600))),      % Ventana principal
+	new(Menu, window('El Juego de la OCA: Men√∫ Principal', size(800, 600))),      % Ventana principal
 	
-	% Imprimimos las im·genes del men˙ principal en sus respectivas posiciones
+	% Imprimimos las im√°genes del men√∫ principal en sus respectivas posiciones
 	imagen(Menu, @menu, menu, point(0,0)),
 	imagen(Menu, @mprincipal, iniciar, point(33, 186)),
 	imagen(Menu, @inst, instrucciones, point(32, 238)),
 	imagen(Menu, @ayuda, ayuda, point(82, 284)),
 	imagen(Menu, @salir, salida, point(84, 336)),
 	
-	% A continuaciÛn, le asignamos la propiedad para poder capturar los clicks 
-	% de ratÛn del usuario, y ejecutamos una acciÛn
+	% A continuaci√≥n, le asignamos la propiedad para poder capturar los clicks 
+	% de rat√≥n del usuario, y ejecutamos una acci√≥n
 	
 	send(@mprincipal, recogniser,
 	     click_gesture(left, '', single,
@@ -231,17 +231,17 @@ free_menu:-
 	     click_gesture(left, '', single,
 			   message(Menu, destroy))),
 	
-	% Ahora le asignamos un cursos para cuando pasamos el ratÛn por encima
+	% Ahora le asignamos un cursos para cuando pasamos el rat√≥n por encima
 	send(@mprincipal, cursor, hand2),
 	send(@ayuda, cursor, hand2),
 	send(@salir, cursor, hand2),
 	send(@inst, cursor, hand2),	
 	
-	send(Menu, open_centered).      % Abrimos el men˙ centrado
+	send(Menu, open_centered).      % Abrimos el men√∫ centrado
 
-% Esta regla la creÈ ya que cuando salimos del tablero de la OCA,
-% volvemos al men˙ principal para iniciar otra partida, ver la ayuda,
-% etc... Intentar ejecutar esta regla nada m·s compilar tiraba error
+% Esta regla la cre√© ya que cuando salimos del tablero de la OCA,
+% volvemos al men√∫ principal para iniciar otra partida, ver la ayuda,
+% etc... Intentar ejecutar esta regla nada m√°s compilar tiraba error
 
 remenu2:-
 
@@ -249,7 +249,7 @@ remenu2:-
 	
 	free_menu, 
 	
-	new(Menu, window('El Juego de la OCA: Men˙ Principal', size(800, 600))),
+	new(Menu, window('El Juego de la OCA: Men√∫ Principal', size(800, 600))),
 	
 	imagen(Menu, @menu, menu, point(0,0)),
 	imagen(Menu, @mprincipal, iniciar, point(33, 186)),
@@ -280,11 +280,11 @@ remenu2:-
 	
 	send(Menu, open_centered).
 
-% Finalmente, una regla similar que nos borre las variables de im·genes,
-% textos, etc... de las distintas pantallas del men˙ principal para
+% Finalmente, una regla similar que nos borre las variables de im√°genes,
+% textos, etc... de las distintas pantallas del men√∫ principal para
 % mostrar el menu principal del juego. Se necesita usar este predicado
 % para evitar molestar al usuario cerrando y abriendo ventanas cada vez
-% que pase de un men˙ a otro
+% que pase de un men√∫ a otro
 
 remenu(Menu):-
 	
@@ -348,15 +348,15 @@ instrucciones(Menu):-
 	send(@ayudab, cursor, hand2).
 	
 	
-% *** Pantalla de configuraciÛn ***
+% *** Pantalla de configuraci√≥n ***
 % 
 % Las siguientes reglas controlan todo lo que refiere a la pantalla de
-% configuraciÛn, y merecen una descripciÛn aparte
+% configuraci√≥n, y merecen una descripci√≥n aparte
 % 
 % *********************************
 
-% AquÌ voy a almacenar las posiciones en la cuadrÌcula de los cuadros de
-% texto de cada jugador, y del seleccionador del n˙mero de jugadores
+% Aqu√≠ voy a almacenar las posiciones en la cuadr√≠cula de los cuadros de
+% texto de cada jugador, y del seleccionador del n√∫mero de jugadores
 
 poss_textitem(0, 29, 186, @labelint).
 poss_textitem(1, 29, 235, @labelj1).
@@ -378,7 +378,7 @@ load_textitem(Num, Menu):-
 	send(Var, editable, true). 
 
 % Con este predicado hacemos que un cuadro de texto no sea editable, por
-% lo tanto, el usuario no podr· modificar su valor
+% lo tanto, el usuario no podr√° modificar su valor
 
 free_textitems(Num):-
 	
@@ -424,16 +424,16 @@ load_start(Menu):-
 	load_textitem(4, Menu),
 	num_jugadores(4).
 
-% Introducimos el n˙mero de jugadores que har·n uso de la partida
+% Introducimos el n√∫mero de jugadores que har√°n uso de la partida
 
 num_jugadores(Num):-
 	
 	retractall(numjug(_)),
 	assert(numjug(Num)).
 
-% AÒadimos los nombres de los jugadores. Este predicado se usar· desde
+% A√±adimos los nombres de los jugadores. Este predicado se usar√° desde
 % XPCE, por lo tanto se define para cada una de las posibilidades. Tanto
-% como si hay 2, 3 o 4 jugadores, los aÒadimos todos a la base de
+% como si hay 2, 3 o 4 jugadores, los a√±adimos todos a la base de
 % conocimientos
 
 % NOTA: la propiedad de color de namejugador/3 es trivial
@@ -459,7 +459,7 @@ insert_jugador(4, P1, P2, P3, P4):-
 	assert(namejugador(3, P3, 'rojo')),
 	assert(namejugador(4, P4, 'rojo')).
 	
-% Por ˙ltimo, creamos la pantalla de configuraciÛn, usando todas las
+% Por √∫ltimo, creamos la pantalla de configuraci√≥n, usando todas las
 % reglas anteriores
 
 config(Menu):-
@@ -475,18 +475,18 @@ config(Menu):-
 	
 	send(@ayudab, cursor, hand2),
 	
-	% Sacamos los cuadros de texto de configuraciÛn
+	% Sacamos los cuadros de texto de configuraci√≥n
 	send(Menu, display, new(@numJug, 
-				int_item('N˙mero de jugadores', 4, 
+				int_item('N√∫mero de jugadores', 4, 
 					 message(@prolog, load_textitems, @numJug?selection))),
 	     point(29, 190)),
 	
-	send(@numJug, range(low := 2, high := 4)),    % Definimos un rango m·ximo y mÌnimo
+	send(@numJug, range(low := 2, high := 4)),    % Definimos un rango m√°ximo y m√≠nimo
 	
 	load_start(Menu),
        	
-	% BotÛn para iniciar el juego. Insertar· todos los jugadores y lanzar· la ventana de la OCA
-	% TambiÈn destruye la ventana actual
+	% Bot√≥n para iniciar el juego. Insertar√° todos los jugadores y lanzar√° la ventana de la OCA
+	% Tambi√©n destruye la ventana actual
 	
 	send(Menu, display, new(@submit, button('Iniciar juego',
 						and(
@@ -501,7 +501,7 @@ config(Menu):-
 
 % ******** PREDICADOS REFERENTES AL JUEGO DE LA OCA ********
 % 
-% AquÌ ir·n todos los predicados referentes al juego de la OCA, la
+% Aqu√≠ ir√°n todos los predicados referentes al juego de la OCA, la
 % ventana principal, las posiciones de los jugadores y un largo etc.
 % 
 % **********************************************************
@@ -513,7 +513,7 @@ go :-
 	% Borramos todo indicio de juego anterior
 	inicializar,
 	
-	% Creamos la ventana donde ir· nuestro tablero y todo lo dem·s
+	% Creamos la ventana donde ir√° nuestro tablero y todo lo dem√°s
 	new(Oca, window('Juego de la Oca', size(1000, 566))),
 	
 	% Liberamos variables
@@ -522,19 +522,19 @@ go :-
 	imagen(Oca, @fondo, fondo_oca, point(0,0)),
 	imagen(Oca, @tablerooca, tablero, point(0, 0)),
 	
-	% Creamos la imagen, la 'rallita' que ir· debajo de cada jugador para indicar el turno
+	% Creamos la imagen, la 'rallita' que ir√° debajo de cada jugador para indicar el turno
 	imagen(Oca, @actual, actual, point(770, 30)),
 	
 	% Llamamos a otro predicado para crear las fichas
 	crear_fichas(Oca),
 	
-	% Creamos un botÛn para lanzar los dados que llamar· a la regla principal del juego	
+	% Creamos un bot√≥n para lanzar los dados que llamar√° a la regla principal del juego	
 	send(Oca, display, new(@lanzardado, 
 			       button('Tirar',
 				      message(@prolog, empezar_todo, Oca))),
 	     point(900, 8)),
 	
-	% BotÛn para reiniciar el juego
+	% Bot√≥n para reiniciar el juego
 	send(Oca, display, new(@reiniciar, 
 			       button('Reiniciar',
 				      and(
@@ -542,7 +542,7 @@ go :-
 					  message(@prolog, go)))), 
 	     point(740, 531)),
 	
-	% BotÛn para salir
+	% Bot√≥n para salir
 	send(Oca, display, new(@salir_button, 
 			       button('Salir',
 				      and(
@@ -550,7 +550,7 @@ go :-
 					  message(@prolog, remenu2)))),
 	     point(900, 531)),
 	
-	% La imagen de la simp·tica OCA y su viÒeta
+	% La imagen de la simp√°tica OCA y su vi√±eta
 	imagen(Oca, @dialogo, dialogo, point(750, 175)),
 	imagen(Oca, @ocan2, oca_act, point(865, 390)),
 	
@@ -593,8 +593,8 @@ free_all:-
 	free(@estrella).
 
 % Esto crea todas las fichas, con sus respectivos colores, y los textos
-% de jcada jugador. TambiÈn borrar aquellas fichas de jugadores que no
-% vayan a jugar (como cuando escogemos que halla sÛlo 2 jugadores)
+% de jcada jugador. Tambi√©n borrar aquellas fichas de jugadores que no
+% vayan a jugar (como cuando escogemos que halla s√≥lo 2 jugadores)
 
 crear_fichas(Oca):-
 	
@@ -646,7 +646,7 @@ borrar_fichas(4):-
 	free(@fichaj42).
 
 % Coordenadas base de cada casilla dentro del tablero
-% M·s tarde se utilizar·n para calcular la posiciÛn dentro de las mismas
+% M√°s tarde se utilizar√°n para calcular la posici√≥n dentro de las mismas
 
 coords(0,0,0).
 coords(1, 14, 22).
@@ -714,7 +714,7 @@ coords(62, 333, 258).
 coords(63, 438, 273).
 
 % Las coordenadas que debemos sumar a cada cuadro de casilla para
-% colocar las fichas dentro de la cuadrÌcula de modo correcto
+% colocar las fichas dentro de la cuadr√≠cula de modo correcto
 
 posicion_ficha(0, 0, 0).
 posicion_ficha(1, 0, 0).
@@ -722,7 +722,7 @@ posicion_ficha(2, 15, 0).
 posicion_ficha(3, 0, 15).
 posicion_ficha(4, 15, 15).
 
-% Calcular la posiciÛn de una ficha en una determinada casilla
+% Calcular la posici√≥n de una ficha en una determinada casilla
 
 pos_ficha(IDficha, Casilla, PosX, PosY):-
 	
@@ -741,7 +741,7 @@ identifica_ficha(@fichaj2, 2, fichaazul).
 identifica_ficha(@fichaj3, 3, fichaamari).
 identifica_ficha(@fichaj4, 4, ficharoja).
 
-% Predicado para mover una ficha a una posiciÛn
+% Predicado para mover una ficha a una posici√≥n
 
 move_ficha(IDficha, X, Y, Oca):-
 	
@@ -762,7 +762,7 @@ cara_dado(Num, Resource):-
 	
 	atom_concat('dado', Num, Resource).
 	
-% Obtener un n˙mero al azar del 1 al 6 // From: Fases OCA
+% Obtener un n√∫mero al azar del 1 al 6 // From: Fases OCA
 
 dados(X):-
 	
@@ -775,7 +775,7 @@ send_log(Msg1, Msg2, Msg3, Msg4, Msg5, Msg6, Oca):-
 	juntar(Msg1, Msg2, Msg3, Msg4, Msg5, Msg6, Resultado),	
         send(Oca, display, new(@logs, text(Resultado)), point(765, 185)),
         send(@logs, font, font('Arial', normal, 12)),          % Fuente
-        send(@logs, geometry(width := 255, height := 174)).    % TamaÒo	
+        send(@logs, geometry(width := 255, height := 174)).    % Tama√±o	
 
 % Y este otro predicado para imprimir un mensaje por la consola de
 % Prolog
@@ -786,12 +786,12 @@ send_prolog(Msg1, Msg2, Msg3, Msg4, Msg5, Msg6):-
 
 % *** Secuencia principal del juego ***
 % 
-% Este predicado lo controlar· todo, se encarga de obtener la posiciÛn
+% Este predicado lo controlar√° todo, se encarga de obtener la posici√≥n
 % del jugador, tirar el dado, mover la ficha, etc...
 %
 % *************************************
 
-empezar_todo(_):-finDeJuego.   % Si est· seteado el finDeJuego/0 no hace nada.
+empezar_todo(_):-finDeJuego.   % Si est√° seteado el finDeJuego/0 no hace nada.
 empezar_todo(Oca):-
 	
 	% Liberamos la ficha fantasma y la volvemos a crear para moverla posteriormente
@@ -800,7 +800,7 @@ empezar_todo(Oca):-
        
 	send(@logs, clear),
 	
-	% Obtener el n˙mero de tiradas que llevamos hasta ahora y sumarle
+	% Obtener el n√∫mero de tiradas que llevamos hasta ahora y sumarle
 	tiradas(Tiradas),
 	
 	TiradasNew is Tiradas+1,
@@ -814,8 +814,8 @@ empezar_todo(Oca):-
 	
 	dados(N),
 	
-	% Comprobamos si el usuario ha pasado de largo por la casilla de la c·rcel
-	% y llamamos a una regla que nos libera de la c·rcel a aquellos que estuvieran
+	% Comprobamos si el usuario ha pasado de largo por la casilla de la c√°rcel
+	% y llamamos a una regla que nos libera de la c√°rcel a aquellos que estuvieran
 	ubicacion(TurnoA, CarcelP),
 	newpos(CarcelP, N, NewPossC),
 	
@@ -845,7 +845,7 @@ empezar_todo(Oca):-
 	% Movemos la ficha de la casilla anterior a la siguiente
 	move_ficha_casilla(TurnoA, Poss, Oca).
 
-% *** Miscel·nea ***
+% *** Miscel√°nea ***
 % 
 % Predicados varios que se usan a lo largo de las reglas 
 % de eventos
@@ -885,7 +885,7 @@ fantasma(Casilla, Oca):-
 	
 	move_ficha_casilla(0, Casilla, Oca).
 
-% Creamos las posiciones de la estrellita que cargar· encima de la ficha
+% Creamos las posiciones de la estrellita que cargar√° encima de la ficha
 % del ganador
 
 estrella_ganador(1, 739, 9).
@@ -894,14 +894,14 @@ estrella_ganador(3, 739, 85).
 estrella_ganador(4, 739, 124).
 
 % Y finalmente, otro perdicado para imprimir la estrella en una
-% determinada posiciÛn
+% determinada posici√≥n
 
 ganador_imagen(IDplayer, Oca):-
 	
 	estrella_ganador(IDplayer, X, Y),
 	imagen(Oca, @estrella, estrella, point(X, Y)).
 
-% Calcular la nueva posiciÛn del jugador teniendo en cuenta que no
+% Calcular la nueva posici√≥n del jugador teniendo en cuenta que no
 % sobrepase de la casilla 63
 
 newpos(PosA,N,NewPos):-
@@ -943,12 +943,12 @@ siguiente_jugador(Actual,Siguiente):-
 	;   Siguiente is Actual+1
 	).
 
-% *** Salir de la c·rcel ***
+% *** Salir de la c√°rcel ***
 % 
-% A este regla le pasamos la posiciÛn anterior y nueva de un jugador
-% para fijarnos si ha pasado por la c·rcel. En caso afirmativo, lo
-% liberar de la c·rcel y seguir· jugando. Se repite por cada jugador, y
-% no importa si est· en la c·rcel o no, pues siempre devuelve 'Yes'
+% A este regla le pasamos la posici√≥n anterior y nueva de un jugador
+% para fijarnos si ha pasado por la c√°rcel. En caso afirmativo, lo
+% liberar de la c√°rcel y seguir√° jugando. Se repite por cada jugador, y
+% no importa si est√° en la c√°rcel o no, pues siempre devuelve 'Yes'
 % 
 % **************************
 
@@ -972,15 +972,15 @@ salir_carcel(IDplayer, PossAct, Next):-
 
 % ******** CASILLAS CON EVENTOS ESPECIALES ********
 % 
-% En esta secciÛn est·n todos los predicados de los eventos especiales,
-% que cargar·n cuando el usuario caiga en la correspondiente casilla
+% En esta secci√≥n est√°n todos los predicados de los eventos especiales,
+% que cargar√°n cuando el usuario caiga en la correspondiente casilla
 % 
 % ************************************************* 
 
 % *** Casilla de la meta ***
 % 
-% Al llegar a la meta, introduce el perdicado din·mico finDeJuego/0 para
-% que no pueda continuar e imprime un mensaje del ganador. TambiÈn
+% Al llegar a la meta, introduce el perdicado din√°mico finDeJuego/0 para
+% que no pueda continuar e imprime un mensaje del ganador. Tambi√©n
 % dibuja la estrella y obtienes el total de tiradas
 % 
 % **************************
@@ -993,13 +993,13 @@ meta(IDplayer, Oca):-
         namejugador(IDplayer, Name, _),
         tiradas(Tiradas),
 	
-	send_log('°"', Name, '" ha ganado el juego! =\'D', '\n\nTotal de tiradas: ', Tiradas, '', Oca),
+	send_log('¬°"', Name, '" ha ganado el juego! =\'D', '\n\nTotal de tiradas: ', Tiradas, '', Oca),
 	cambia_token(IDplayer, Oca),
 	
 	ganador_imagen(IDplayer, Oca).
 
-% Este regla es para cuando un jugador caiga en la posiciÛn 59, la OCA
-% en dÛnde ganar· directamente
+% Este regla es para cuando un jugador caiga en la posici√≥n 59, la OCA
+% en d√≥nde ganar√° directamente
 
 meta_oca(IDplayer, Oca):-
 	moveplayer_casilla(IDplayer, 63),
@@ -1018,7 +1018,7 @@ siguiente_oca(Actual, Siguiente):-
 % 
 % Este evento obtiene la siguiente OCA y mueve al jugado hasta ella
 % pero antes imprime la ficha fantasma, para indicar en que casilla 
-% habÌa caido anteriormente
+% hab√≠a caido anteriormente
 % 
 % ************************
 
@@ -1034,7 +1034,7 @@ oca(IDplayer, Oca):-
 	
 	moveplayer_casilla(IDplayer, SiguienteOca),
        
-	send_log(Name, ' ha caido en la OCA\ny salta de la casilla ', OcaActual, '\na la casilla ', SiguienteOca, '\n\n°Tira de nuevo!', Oca).
+	send_log(Name, ' ha caido en la OCA\ny salta de la casilla ', OcaActual, '\na la casilla ', SiguienteOca, '\n\n¬°Tira de nuevo!', Oca).
 
 % *** Evento de la Calavera ***
 % 
@@ -1050,7 +1050,7 @@ calavera(IDplayer, Oca):-
         moveplayer_casilla(IDplayer, 1),
 	send_log('', Name, '" ha caido en la calavera\ny vuelve al inicio =(', '', '\n\n', '', Oca).
 
-% Calculamos el siguiente puente en base a la posiciÛn actual
+% Calculamos el siguiente puente en base a la posici√≥n actual
 
 siguiente_puente(Actual, Siguiente):-
 	
@@ -1075,11 +1075,11 @@ puente(IDplayer, Oca):-
 	siguiente_puente(PuenteActual, Next),
 	
 	atom_concat('\na la casilla ', Next, Concat),
-	send_log('"', Name, '" ha caido en el puente\ny salta de la casilla ', PuenteActual, Concat, '\n\n°Tira de nuevo!', Oca),
+	send_log('"', Name, '" ha caido en el puente\ny salta de la casilla ', PuenteActual, Concat, '\n\n¬°Tira de nuevo!', Oca),
 	
 	moveplayer_casilla(IDplayer, Next).
 
-% Calculamos la siguiente posiciÛn de los dados
+% Calculamos la siguiente posici√≥n de los dados
 
 siguiente_dados(Actual, Siguiente):-
 	
@@ -1108,8 +1108,8 @@ losdados(IDplayer, Oca):-
 
 % *** Evento del Laberinto ***
 % 
-% Cuando un jugador caiga aquÌ se le llevar· a la casilla 30, pero
-% seguir· el turno, es decir, no tirar· de nuevo
+% Cuando un jugador caiga aqu√≠ se le llevar√° a la casilla 30, pero
+% seguir√° el turno, es decir, no tirar√° de nuevo
 % 
 % ****************************
 
@@ -1125,8 +1125,8 @@ laberinto(IDplayer, Oca):-
 	
 	turno(TurnoA),
 	
-	% *** Comprobar si el siguiente jugador est· bloqueado ***
-	% Desde aquÌ comprobamos si el siguiente jugador no est· bloqueado
+	% *** Comprobar si el siguiente jugador est√° bloqueado ***
+	% Desde aqu√≠ comprobamos si el siguiente jugador no est√° bloqueado
 	% (sin turno), en caso afirmativo, le pasamos el turno al siguiente
 	% ********************************************************
 	
@@ -1148,7 +1148,7 @@ laberinto(IDplayer, Oca):-
 % *** Evento de la Posada ***
 % 
 % Cuando un jugador activa este evento, se introduce en la base de conocimientos
-% el n˙mero de turnos que estar· bloqueado, y que se ir·n restando cuando el jugador
+% el n√∫mero de turnos que estar√° bloqueado, y que se ir√°n restando cuando el jugador
 % anterior al bloqueado tire dado
 % 
 % ***************************
@@ -1162,7 +1162,7 @@ posada(IDplayer, Oca):-
 	
 	namejugador(IDplayer, Name, _),
 	
-	send_log('"', Name, '" ha caido en la posada\ny estar· 1 turno sin jugar. ','', '', '', Oca),
+	send_log('"', Name, '" ha caido en la posada\ny estar√° 1 turno sin jugar. ','', '', '', Oca),
 	
 	siguiente_jugador(IDplayer, SiguienteJugador),
 	
@@ -1184,17 +1184,17 @@ pozo(IDplayer, Oca):-
 	
 	namejugador(IDplayer, Name, _),
 	
-	send_log('"', Name, '" ha caido en el pozo\ny estar· 2 turnos sin jugar =( ','', '', '', Oca),
+	send_log('"', Name, '" ha caido en el pozo\ny estar√° 2 turnos sin jugar =( ','', '', '', Oca),
 	
 	siguiente_jugador(IDplayer, SiguienteJugador),
 	
 	retractall(turno(_)),
 	assert(turno(SiguienteJugador)).
 
-% *** Evento de la C·rcel ***
+% *** Evento de la C√°rcel ***
 % 
-% Cuando un jugador caiga en la c·rcel, le pondremos 999 turnos sin poder tirar, es
-% decir, hasta que no se le borren esa barbaridad de turnos, no podr· moverse. 
+% Cuando un jugador caiga en la c√°rcel, le pondremos 999 turnos sin poder tirar, es
+% decir, hasta que no se le borren esa barbaridad de turnos, no podr√° moverse. 
 % Los turnos se borran con el predicado salir_carcel/3
 % 
 % ***************************
@@ -1208,18 +1208,18 @@ lacarcel(IDplayer, Oca):-
 	
 	namejugador(IDplayer, Name, _),
 	
-	send_log('"', Name, '" est· encerrado en la c·rcel\ny saldr· cuando alguien pase \npor esa posiciÛn =( ','', '', '', Oca),
+	send_log('"', Name, '" est√° encerrado en la c√°rcel\ny saldr√° cuando alguien pase \npor esa posici√≥n =( ','', '', '', Oca),
 	
 	siguiente_jugador(IDplayer, SiguienteJugador),
 	
 	retractall(turno(_)),
 	assert(turno(SiguienteJugador)).	
 	
-% *** Evento sin acciÛn ***
+% *** Evento sin acci√≥n ***
 % 
-% Este evento ocurrir· cada vez que un usuario caiga en una casilla sin
-% evento, y se encargar· de pasar el turno al siguiente jugador, al contrario
-% del resto de eventos (a excepciÛn del laberinto), que mantiene el turno en el
+% Este evento ocurrir√° cada vez que un usuario caiga en una casilla sin
+% evento, y se encargar√° de pasar el turno al siguiente jugador, al contrario
+% del resto de eventos (a excepci√≥n del laberinto), que mantiene el turno en el
 % jugador (la OCA, el puente, los dados, etc.)
 % 
 % *************************
@@ -1316,7 +1316,7 @@ casillajug(61, noact).
 casillajug(62, noact).
 casillajug(63, meta).
 
-% Por ˙ltimo, la regla que llama a los eventos en cuanto un usuario cae en
+% Por √∫ltimo, la regla que llama a los eventos en cuanto un usuario cae en
 % ellos
 
 check_casilla(Jug, Oca):-
