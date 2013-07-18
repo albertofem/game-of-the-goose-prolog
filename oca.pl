@@ -6,6 +6,7 @@
 % 
 % *******************************************************
 
+:- encoding(utf8).
 
 % Cargamos las librerías XPCE
 
@@ -14,7 +15,7 @@
 % Le indicamos el directorio base donde estarán ubicadas las imágenes de
 % nuestro programa, el tablero, los dados, las fichas, etc...
 
-:- pce_image_directory('./img/').
+:- pce_image_directory('./assets/').
 
 % ******** OPERACIONES INICIALES ********
 % 
