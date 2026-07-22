@@ -11,11 +11,14 @@
 % Cargamos las librerías XPCE
 
 :- use_module(library(pce)).
+:- use_module(library(pce_main)).
 
 % Le indicamos el directorio base donde estarán ubicadas las imágenes de
 % nuestro programa, el tablero, los dados, las fichas, etc...
 
-:- pce_image_directory('./assets/').
+:- prolog_load_context(directory, ProjectDir),
+   directory_file_path(ProjectDir, assets, AssetsDir),
+   pce_image_directory(AssetsDir).
 
 % ******** OPERACIONES INICIALES ********
 % 
@@ -25,9 +28,6 @@
 % 
 % ***************************************
 
-
-:- write('\033[2J').    
-:- write('[p] Creando imágenes...\n').
 
 % Imágenes del menú principal
 
@@ -52,8 +52,6 @@ resource(instrucciones_v, image, image('instrucciones_v.jpg')).
 
 % Todas las imágenes de la pantalla de la OCA
 
-:- write('[p] Creando imágenes de la OCA...\n').
-
 resource(tablero, image, image('tablero.jpg')).     
 resource(dado1, image, image('dado1.gif')).          
 resource(dado2, image, image('dado2.gif')).
@@ -71,8 +69,6 @@ resource(estrella, imagen, image('estrella.gif')).
 
 % Fichas de los jugadores
 
-:- write('[p] Creando fichas de los jugadores...\n').
-
 resource(fichaazul, fichaazul, image('ficha_azul.gif')).
 resource(fichaamari, image, image('ficha_amarillo.gif')).
 resource(ficharoja, image, image('ficha_roja.gif')).
@@ -89,7 +85,7 @@ resource(fichaverde, image, image('ficha_verde.gif')).
 
 imagen(Ventana, Figura, Imagen, Posicion) :-
 	new(Figura, figure),
-	new(Bitmap, bitmap(resource(Imagen),@on)),
+	new(Bitmap, bitmap(resource(Imagen))),
 	send(Bitmap, name, 1),
 	send(Figura, display, Bitmap),
 	send(Figura, status, 1),
@@ -117,8 +113,6 @@ juntar(Cosa1, Cosa2, Cosa3, Cosa4, Cosa5, Cosa6, Resultado):-
 % un pequeño comentario como aclaración al lado
 % 
 % ***************************************
-
-:- write('[p] Creando predicados dinámicos...\n').
 
 :-dynamic turno/1.             % Este predicado controlar el turno 
 :-dynamic ubicacion/2.         
@@ -185,11 +179,9 @@ free_menu:-
 	free(@instrucciones).
 
 
-% Menu principal de la OCA. En un predicado que lanza al inicio en
-% cuanto compilamos nuestro programa
-:- write('[p] Lanzando menú principal...\n').
+% Menú principal de la OCA.
 
-:-
+menu_principal:-
 	
 	% Borramos los jugadores anteriores. No se hace en la ventana de la OCA 
 	% para que nos permita reiniciar un juego y no perder los datos de los jugadores
@@ -239,6 +231,21 @@ free_menu:-
 	send(@inst, cursor, hand2),	
 	
 	send(Menu, open_centered).      % Abrimos el menú centrado
+
+% Punto de entrada de la aplicación. Al declararlo como `main`, el juego
+% conserva su inicio automático al ejecutarse como script, pero puede
+% cargarse desde PlUnit sin abrir ventanas.
+
+start(_Argv):-
+	write('\033[2J'),
+	write('[p] Creando imágenes...\n'),
+	write('[p] Creando imágenes de la OCA...\n'),
+	write('[p] Creando fichas de los jugadores...\n'),
+	write('[p] Creando predicados dinámicos...\n'),
+	write('[p] Lanzando menú principal...\n'),
+	menu_principal.
+
+:- initialization(pce_main_loop(start), main).
 
 % Esta regla la creé ya que cuando salimos del tablero de la OCA,
 % volvemos al menú principal para iniciar otra partida, ver la ayuda,
@@ -776,7 +783,7 @@ send_log(Msg1, Msg2, Msg3, Msg4, Msg5, Msg6, Oca):-
 	juntar(Msg1, Msg2, Msg3, Msg4, Msg5, Msg6, Resultado),	
         send(Oca, display, new(@logs, text(Resultado)), point(765, 185)),
         send(@logs, font, font('Arial', normal, 12)),          % Fuente
-        send(@logs, geometry(width := 255, height := 174)).    % Tamaño	
+        send(@logs, margin, 190, wrap_fixed_width).            % Ajustar el texto a la viñeta
 
 % Y este otro predicado para imprimir un mensaje por la consola de
 % Prolog
