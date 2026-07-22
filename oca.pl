@@ -11,7 +11,6 @@
 % Cargamos las librerías XPCE
 
 :- use_module(library(pce)).
-:- use_module(library(pce_main)).
 
 % Le indicamos el directorio base donde estarán ubicadas las imágenes de
 % nuestro programa, el tablero, los dados, las fichas, etc...
@@ -232,9 +231,9 @@ menu_principal:-
 	
 	send(Menu, open_centered).      % Abrimos el menú centrado
 
-% Punto de entrada de la aplicación. Al declararlo como `main`, el juego
-% conserva su inicio automático al ejecutarse como script, pero puede
-% cargarse desde PlUnit sin abrir ventanas.
+% Punto de entrada de la aplicación. El bucle consulta las ventanas abiertas
+% después de cada evento. Esto permite sustituir el menú por el tablero (y
+% viceversa) sin que el proceso termine al destruir la ventana anterior.
 
 start(_Argv):-
 	write('\033[2J'),
@@ -245,7 +244,28 @@ start(_Argv):-
 	write('[p] Lanzando menú principal...\n'),
 	menu_principal.
 
-:- initialization(pce_main_loop(start), main).
+application_open_frame_count(Count):-
+	get(@display?frames, find_all, @arg1?kind == toplevel, Frames),
+	get(Frames, size, Count).
+
+application_event_loop:-
+	application_open_frame_count(Count),
+	(   Count =:= 0
+	->  true
+	;   (   catch(send(@display, dispatch), Error,
+			  print_message(error, Error))
+	    ->  true
+	    ;   true
+	    ),
+	    application_event_loop
+	).
+
+oca_main:-
+	current_prolog_flag(argv, Argv),
+	start(Argv),
+	application_event_loop.
+
+:- initialization(oca_main, main).
 
 % Esta regla la creé ya que cuando salimos del tablero de la OCA,
 % volvemos al menú principal para iniciar otra partida, ver la ayuda,

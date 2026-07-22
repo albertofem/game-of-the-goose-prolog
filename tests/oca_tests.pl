@@ -367,6 +367,28 @@ test(player_already_past_jail_does_not_release_prisoner,
 
 :- begin_tests(oca_ui).
 
+test(resized_window_can_be_replaced_without_ending_application,
+     [ setup(( new(Original, window('OCA lifecycle original')),
+               new(Replacement, window('OCA lifecycle replacement'))
+             )),
+       cleanup(( (object(Original) -> free(Original) ; true),
+                 (object(Replacement) -> free(Replacement) ; true)
+               )),
+       nondet
+     ]) :-
+    user:application_open_frame_count(Baseline),
+    send(Original, open),
+    send(Original, size, size(420, 280)),
+    send(Replacement, open),
+    user:application_open_frame_count(WithBothWindows),
+    assertion(WithBothWindows =:= Baseline + 2),
+    send(Original, destroy),
+    user:application_open_frame_count(AfterReplacement),
+    assertion(AfterReplacement =:= Baseline + 1),
+    send(Replacement, destroy),
+    user:application_open_frame_count(AfterClosingBoth),
+    assertion(AfterClosingBoth =:= Baseline).
+
 test(imagen_loads_and_positions_a_resource,
      [ setup(oca_test_support:setup_canvas(Canvas)),
        cleanup(oca_test_support:cleanup_canvas(Canvas)),
