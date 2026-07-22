@@ -1,3 +1,5 @@
+:- encoding(utf8).
+
 % *******************************************************
 % 
 % El juego de la OCA gráfica, Programado en Prolog + XPCE
@@ -5,8 +7,6 @@
 % Universidad de Alicante, Lógica Computacional
 % 
 % *******************************************************
-
-:- encoding(utf8).
 
 % Cargamos las librerías XPCE
 
