@@ -12,10 +12,12 @@ The game requires SWI-Prolog with XPCE support. On macOS, the official
 Run the game from the project directory:
 
 ```sh
-/Applications/SWI-Prolog.app/Contents/MacOS/swipl -s oca.pl
+make run
 ```
 
-If `swipl` is already on your `PATH`, this shorter command also works:
+The Makefile automatically uses `/Applications/SWI-Prolog.app` on macOS when
+it is installed there. If `swipl` is already on your `PATH`, this command also
+works:
 
 ```sh
 swipl -s oca.pl
@@ -40,13 +42,34 @@ Run the tests with clause coverage:
 make coverage
 ```
 
+Coverage must remain at or above 85% for the application files. Run every
+local quality check with:
+
+```sh
+make check
+```
+
+Architecture
+------------
+
+- `oca.pl` contains application startup, mutable session state, and the XPCE
+  interface.
+- `src/oca_board.pl` contains immutable board coordinates and square events.
+- `src/oca_rules.pl` contains pure movement, scheduling, jail, pairing, and
+  player-validation rules.
+- `tests/` contains the PlUnit suite and reusable XPCE test fixtures.
+
+The artwork uses fixed pixel coordinates, so the menu and game windows are
+intentionally non-resizable. Player names are trimmed, must be unique, and
+may contain at most 20 characters.
+
 If you want to know more about the "Oca":
 
-http://en.wikipedia.org/wiki/Game_of_the_Goose
+https://en.wikipedia.org/wiki/Game_of_the_Goose
 
 Screenshots
 -----------
 
-![Menu](https://raw.github.com/albertofem/Oca/master/screenshots/menu.jpg)
+![Menu](screenshots/menu.jpg)
 
-![Game](https://raw.github.com/albertofem/Oca/master/screenshots/game.jpg)
+![Game](screenshots/game.jpg)

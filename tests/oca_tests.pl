@@ -9,9 +9,6 @@
 
 :- begin_tests(oca_helpers).
 
-test(nada_always_succeeds) :-
-    user:nada(any_value).
-
 test(juntar_concatenates_six_atoms) :-
     user:juntar('El ', juego, ' de ', la, ' ', 'OCA', Result),
     assertion(Result == 'El juego de la OCA').
@@ -48,6 +45,37 @@ test(dados_only_returns_all_valid_faces,
 :- end_tests(oca_helpers).
 
 
+:- begin_tests(oca_rules).
+
+test(next_playable_player_skips_every_blocked_player) :-
+    Statuses0 = [1-ready, 2-skip(1), 3-skip(2), 4-ready],
+    oca_rules:next_playable_player(1, 4, Statuses0, Next, Statuses),
+    assertion(Next == 4),
+    assertion(Statuses == [1-ready, 2-ready, 3-skip(1), 4-ready]).
+
+test(next_playable_player_can_wrap_to_current_player) :-
+    Statuses0 = [1-ready, 2-skip(1), 3-jailed, 4-skip(1)],
+    oca_rules:next_playable_player(1, 4, Statuses0, Next, Statuses),
+    assertion(Next == 1),
+    assertion(Statuses == [1-ready, 2-ready, 3-jailed, 4-ready]).
+
+test(next_playable_player_reports_a_full_jail_deadlock) :-
+    Statuses = [1-jailed, 2-jailed],
+    oca_rules:next_playable_player(1, 2, Statuses, Next, Updated),
+    assertion(Next == none),
+    assertion(Updated == Statuses).
+
+test(player_status_rejects_zero_length_skip, [fail]) :-
+    oca_rules:valid_player_status(skip(0)).
+
+test(crossing_jail_requires_moving_beyond_square_fifty_two) :-
+    assertion(oca_rules:crosses_jail(51, 53)),
+    assertion(\+ oca_rules:crosses_jail(51, 52)),
+    assertion(\+ oca_rules:crosses_jail(52, 58)).
+
+:- end_tests(oca_rules).
+
+
 :- begin_tests(oca_configuration).
 
 test(inicializar_replaces_all_game_state,
@@ -56,7 +84,7 @@ test(inicializar_replaces_all_game_state,
                assertz(user:ubicacion(1, 40)),
                assertz(user:finDeJuego),
                assertz(user:tiradas(99)),
-               assertz(user:turnosSinJugar(1, 7))
+               assertz(user:estado_jugador(1, skip(7)))
              )),
        cleanup(oca_test_support:cleanup_dynamic_state)
      ]) :-
@@ -64,15 +92,14 @@ test(inicializar_replaces_all_game_state,
     findall(Turn, user:turno(Turn), Turns),
     findall(Player-Position, user:ubicacion(Player, Position), Locations),
     findall(Throws, user:tiradas(Throws), ThrowCounts),
-    findall(Player-Blocked,
-            user:turnosSinJugar(Player, Blocked),
-            BlockedTurns),
+    findall(Player-Status,
+            user:estado_jugador(Player, Status),
+            PlayerStatuses),
     assertion(Turns == [1]),
     assertion(Locations == [1-1, 2-1, 3-1, 4-1]),
     assertion(ThrowCounts == [1]),
-    assertion(BlockedTurns == [1-0, 2-0, 3-0, 4-0]),
-    assertion(\+ user:finDeJuego),
-    assertion(\+ user:carcel(_)).
+    assertion(PlayerStatuses == [1-ready, 2-ready, 3-ready, 4-ready]),
+    assertion(\+ user:finDeJuego).
 
 test(num_jugadores_keeps_one_value,
      [cleanup(oca_test_support:cleanup_dynamic_state)]) :-
@@ -89,7 +116,7 @@ test(insert_two_players_fills_unused_slots,
     findall(Id-Name-Colour,
             user:namejugador(Id, Name, Colour),
             Players),
-    assertion(Players == [1-'Ada'-rojo, 2-'Grace'-rojo,
+    assertion(Players == [1-'Ada'-verde, 2-'Grace'-azul,
                           3-''-'', 4-''-'']).
 
 test(insert_three_players_fills_last_slot,
@@ -111,6 +138,47 @@ test(insert_four_players_preserves_order,
             user:namejugador(Id, Name, _),
             Players),
     assertion(Players == [1-uno, 2-dos, 3-tres, 4-cuatro]).
+
+test(player_configuration_replaces_previous_facts,
+     [ setup(oca_test_support:cleanup_dynamic_state),
+       cleanup(oca_test_support:cleanup_dynamic_state)
+     ]) :-
+    user:insert_jugador(2, uno, dos, ignored, ignored),
+    user:insert_jugador(2, tres, cuatro, ignored, ignored),
+    findall(Id-Name, user:namejugador(Id, Name, _), Players),
+    assertion(Players == [1-tres, 2-cuatro, 3-'', 4-'']).
+
+test(player_names_are_trimmed,
+     [ setup(oca_test_support:cleanup_dynamic_state),
+       cleanup(oca_test_support:cleanup_dynamic_state)
+     ]) :-
+    user:insert_jugador(2, '  Ada  ', ' Grace ', ignored, ignored),
+    assertion(user:namejugador(1, 'Ada', verde)),
+    assertion(user:namejugador(2, 'Grace', azul)).
+
+test(blank_player_name_is_rejected,
+     [ throws(error(domain_error(non_empty_player_name, _), _))
+     ]) :-
+    user:insert_jugador(2, 'Ada', '   ', ignored, ignored).
+
+test(duplicate_player_names_are_rejected_case_insensitively,
+     [ throws(error(domain_error(unique_player_names, _), _))
+     ]) :-
+    user:insert_jugador(2, 'Ada', 'ada', ignored, ignored).
+
+test(overlong_player_name_is_rejected,
+     [ throws(error(domain_error(player_name_max_20_characters, _), _))
+     ]) :-
+    user:insert_jugador(2, '123456789012345678901', 'Grace', ignored, ignored).
+
+test(invalid_configuration_preserves_existing_players,
+     [ setup(oca_test_support:cleanup_dynamic_state),
+       cleanup(oca_test_support:cleanup_dynamic_state)
+     ]) :-
+    user:insert_jugador(2, 'Ada', 'Grace', ignored, ignored),
+    catch(user:insert_jugador(2, '', 'Grace', ignored, ignored), _, true),
+    findall(Id-Name, user:namejugador(Id, Name, _), Players),
+    assertion(Players == [1-'Ada', 2-'Grace', 3-'', 4-'']).
 
 test(player_count_controls_text_field_editability,
      [ setup(oca_test_support:setup_canvas(Canvas)),
@@ -328,44 +396,82 @@ test(next_player_wraps_for_four_players,
 
 test(crossing_jail_releases_imprisoned_player,
      [ setup(( oca_test_support:reset_game(4),
-               oca_test_support:set_blocked_turns(2, 999)
+               oca_test_support:set_test_player_status(2, jailed)
              )),
        cleanup(oca_test_support:cleanup_dynamic_state)
-     ]) :-
+    ]) :-
     user:salir_carcel(2, 51, 53),
-    assertion(user:turnosSinJugar(2, 0)).
+    assertion(user:estado_jugador(2, ready)).
 
 test(landing_on_jail_does_not_release_player,
      [ setup(( oca_test_support:reset_game(4),
-               oca_test_support:set_blocked_turns(2, 999)
+               oca_test_support:set_test_player_status(2, jailed)
              )),
        cleanup(oca_test_support:cleanup_dynamic_state)
-     ]) :-
+    ]) :-
     user:salir_carcel(2, 51, 52),
-    assertion(user:turnosSinJugar(2, 999)).
+    assertion(user:estado_jugador(2, jailed)).
 
 test(crossing_jail_does_not_change_normal_penalty,
      [ setup(( oca_test_support:reset_game(4),
-               oca_test_support:set_blocked_turns(2, 2)
+               oca_test_support:set_test_player_status(2, skip(2))
              )),
        cleanup(oca_test_support:cleanup_dynamic_state)
-     ]) :-
+    ]) :-
     user:salir_carcel(2, 51, 53),
-    assertion(user:turnosSinJugar(2, 2)).
+    assertion(user:estado_jugador(2, skip(2))).
 
 test(player_already_past_jail_does_not_release_prisoner,
      [ setup(( oca_test_support:reset_game(4),
-               oca_test_support:set_blocked_turns(2, 999)
+               oca_test_support:set_test_player_status(2, jailed)
              )),
        cleanup(oca_test_support:cleanup_dynamic_state)
-     ]) :-
+    ]) :-
     user:salir_carcel(2, 52, 58),
-    assertion(user:turnosSinJugar(2, 999)).
+    assertion(user:estado_jugador(2, jailed)).
 
 :- end_tests(oca_state).
 
 
 :- begin_tests(oca_ui).
+
+test(fixed_window_disables_resizing,
+     [ setup(user:fixed_window('OCA fixed window test',
+                               size(800, 600), Window)),
+       cleanup((object(Window) -> free(Window) ; true)),
+       nondet
+     ]) :-
+    get(Window, can_resize, CanResize),
+    assertion(CanResize == @off).
+
+test(valid_configuration_replaces_menu_with_fixed_game_window,
+     [ setup(( oca_test_support:cleanup_dynamic_state,
+               oca_test_support:cleanup_ui,
+               user:fixed_window('OCA configuration integration test',
+                                 size(800, 600), Menu),
+               user:config(Menu),
+               send(Menu, open)
+             )),
+       cleanup(( ( nonvar(GameFrame), object(GameFrame)
+                 -> send(GameFrame, destroy)
+                 ;  true
+                 ),
+                 (object(Menu) -> free(Menu) ; true),
+                 oca_test_support:cleanup_ui,
+                 oca_test_support:cleanup_dynamic_state
+               )),
+       nondet
+     ]) :-
+    user:start_configured_game(Menu, 2, 'Ana', 'Beto', '', ''),
+    assertion(\+ object(Menu)),
+    get(@display?frames, find,
+        @arg1?label == 'Juego de la Oca', GameFrame),
+    get(GameFrame, members, Members),
+    get(Members, head, GameWindow),
+    get(GameWindow, can_resize, CanResize),
+    assertion(CanResize == @off),
+    assertion(user:namejugador(1, 'Ana', verde)),
+    assertion(user:namejugador(2, 'Beto', azul)).
 
 test(resized_window_can_be_replaced_without_ending_application,
      [ setup(( new(Original, window('OCA lifecycle original')),
@@ -572,14 +678,27 @@ test(normal_square_wraps_turn_to_first_player,
 
 test(normal_square_skips_one_blocked_player,
      [ setup(( oca_test_support:setup_event_canvas(4, Canvas),
-               oca_test_support:set_blocked_turns(2, 2)
+               oca_test_support:set_test_player_status(2, skip(2))
+             )),
+       cleanup(oca_test_support:cleanup_canvas(Canvas)),
+       nondet
+    ]) :-
+    user:noact(1, Canvas),
+    assertion(user:turno(3)),
+    assertion(user:estado_jugador(2, skip(1))).
+
+test(normal_square_skips_multiple_consecutive_blocked_players,
+     [ setup(( oca_test_support:setup_event_canvas(4, Canvas),
+               oca_test_support:set_test_player_status(2, skip(1)),
+               oca_test_support:set_test_player_status(3, skip(1))
              )),
        cleanup(oca_test_support:cleanup_canvas(Canvas)),
        nondet
      ]) :-
     user:noact(1, Canvas),
-    assertion(user:turno(3)),
-    assertion(user:turnosSinJugar(2, 1)).
+    assertion(user:turno(4)),
+    assertion(user:estado_jugador(2, ready)),
+    assertion(user:estado_jugador(3, ready)).
 
 test(goose_moves_to_next_goose_and_keeps_turn,
      [ setup(( oca_test_support:setup_event_canvas(4, Canvas),
@@ -647,7 +766,7 @@ test(maze_returns_player_to_thirty_and_advances_turn,
 test(maze_skips_and_decrements_a_blocked_next_player,
      [ setup(( oca_test_support:setup_event_canvas(4, Canvas),
                oca_test_support:set_location(1, 42),
-               oca_test_support:set_blocked_turns(2, 1)
+               oca_test_support:set_test_player_status(2, skip(1))
              )),
        cleanup(oca_test_support:cleanup_canvas(Canvas)),
        nondet
@@ -655,7 +774,7 @@ test(maze_skips_and_decrements_a_blocked_next_player,
     user:laberinto(1, Canvas),
     assertion(user:ubicacion(1, 30)),
     assertion(user:turno(3)),
-    assertion(user:turnosSinJugar(2, 0)).
+    assertion(user:estado_jugador(2, ready)).
 
 test(inn_blocks_player_for_one_turn,
      [ setup(( oca_test_support:setup_event_canvas(4, Canvas),
@@ -663,9 +782,9 @@ test(inn_blocks_player_for_one_turn,
              )),
        cleanup(oca_test_support:cleanup_canvas(Canvas)),
        nondet
-     ]) :-
+    ]) :-
     user:posada(1, Canvas),
-    assertion(user:turnosSinJugar(1, 1)),
+    assertion(user:estado_jugador(1, skip(1))),
     assertion(user:turno(2)).
 
 test(well_blocks_player_for_two_turns,
@@ -674,9 +793,9 @@ test(well_blocks_player_for_two_turns,
              )),
        cleanup(oca_test_support:cleanup_canvas(Canvas)),
        nondet
-     ]) :-
+    ]) :-
     user:pozo(1, Canvas),
-    assertion(user:turnosSinJugar(1, 2)),
+    assertion(user:estado_jugador(1, skip(2))),
     assertion(user:turno(2)).
 
 test(jail_blocks_player_until_someone_passes,
@@ -685,9 +804,9 @@ test(jail_blocks_player_until_someone_passes,
              )),
        cleanup(oca_test_support:cleanup_canvas(Canvas)),
        nondet
-     ]) :-
+    ]) :-
     user:lacarcel(1, Canvas),
-    assertion(user:turnosSinJugar(1, 999)),
+    assertion(user:estado_jugador(1, jailed)),
     assertion(user:turno(2)).
 
 test(finish_marks_game_over_and_draws_winner,

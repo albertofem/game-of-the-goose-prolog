@@ -35,5 +35,5 @@ jobs:
       - name: Show SWI-Prolog version
         run: swipl --version
 
-      - name: Run test suite
-        run: xvfb-run --auto-servernum make test SWIPL=/usr/bin/swipl
+      - name: Run quality checks
+        run: xvfb-run --auto-servernum make check SWIPL=/usr/bin/swipl

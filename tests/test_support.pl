@@ -8,7 +8,7 @@
             cleanup_canvas/1,
             set_location/2,
             set_turn/1,
-            set_blocked_turns/2,
+            set_test_player_status/2,
             text_value/2
           ]).
 
@@ -20,9 +20,9 @@ cleanup_dynamic_state :-
     retractall(user:finDeJuego),
     retractall(user:tiradas(_)),
     retractall(user:numjug(_)),
-    retractall(user:turnosSinJugar(_, _)),
+    retractall(user:estado_jugador(_, _)),
     retractall(user:namejugador(_, _, _)),
-    retractall(user:carcel(_)).
+    true.
 
 cleanup_ui :-
     global_test_objects(Objects),
@@ -89,9 +89,8 @@ set_turn(Player) :-
     retractall(user:turno(_)),
     assertz(user:turno(Player)).
 
-set_blocked_turns(Player, Turns) :-
-    retractall(user:turnosSinJugar(Player, _)),
-    assertz(user:turnosSinJugar(Player, Turns)).
+set_test_player_status(Player, Status) :-
+    user:set_player_status(Player, Status).
 
 text_value(TextObject, Value) :-
     get(TextObject, string, Value).

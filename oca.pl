@@ -11,6 +11,9 @@
 % Cargamos las librerías XPCE
 
 :- use_module(library(pce)).
+:- use_module(library(random), [random_between/3]).
+:- use_module('src/oca_board.pl').
+:- use_module('src/oca_rules.pl', []).
 
 % Le indicamos el directorio base donde estarán ubicadas las imágenes de
 % nuestro programa, el tablero, los dados, las fichas, etc...
@@ -90,12 +93,6 @@ imagen(Ventana, Figura, Imagen, Posicion) :-
 	send(Figura, status, 1),
 	send(Ventana, display, Figura, Posicion).
 
-% Un predicado auxiliar que devolverá 'Yes' siempre
-% Útil para evitar el warning de Singleton Variables y para los
-% condicionales
-
-nada(_).
-
 % Juntar una cadena de 6 cadenas y variables
 
 juntar(Cosa1, Cosa2, Cosa3, Cosa4, Cosa5, Cosa6, Resultado):-
@@ -105,6 +102,13 @@ juntar(Cosa1, Cosa2, Cosa3, Cosa4, Cosa5, Cosa6, Resultado):-
 	atom_concat(Cosa33,Cosa5,Cosa44),
 	atom_concat(Cosa44,Cosa6,Resultado).
 
+% Las pantallas usan fondos rasterizados y coordenadas fijas. Impedir que el
+% usuario cambie su tamaño evita recortes y controles desalineados.
+
+fixed_window(Title, Size, Window):-
+	new(Window, window(Title, Size)),
+	send(Window, can_resize, @off).
+
 
 % ******** PREDICADOS DINÁMICOS  ********
 % 
@@ -113,16 +117,13 @@ juntar(Cosa1, Cosa2, Cosa3, Cosa4, Cosa5, Cosa6, Resultado):-
 % 
 % ***************************************
 
-:-dynamic turno/1.             % Este predicado controlar el turno 
-:-dynamic ubicacion/2.         
-:-dynamic finDeJuego/0.           
-:-dynamic tiradas/1.           % Predicado para contabilizar el número de tiradas de una partida
-:-dynamic numjug/1.            % Predicado para controlar el número de jugadores de la partida
-:-dynamic turnosSinJugar/2.    % Controla los turnos que va a estar sin jugar un jugador
-:-dynamic namejugador/3.       % Nombres de los jugadores
-
-% NOTA sobre namejugador/3: El tercer parámetro es para el color, pero
-% no he podido implementarlo a tiempo
+:- dynamic turno/1.             % Este predicado controla el turno
+:- dynamic ubicacion/2.
+:- dynamic finDeJuego/0.
+:- dynamic tiradas/1.           % Número de tiradas de una partida
+:- dynamic numjug/1.            % Número de jugadores de la partida
+:- dynamic estado_jugador/2.    % ready, skip(N) o jailed
+:- dynamic namejugador/3.       % Identificador, nombre y color
 
 
 % ******** PREDICADOS DEL INICIO ********
@@ -141,21 +142,20 @@ juntar(Cosa1, Cosa2, Cosa3, Cosa4, Cosa5, Cosa6, Resultado):-
 inicializar:-
 	
 	retractall(turno(_)),
-	assert(turno(1)),
+	assertz(turno(1)),
 	retractall(ubicacion(_,_)),
-	assert(ubicacion(1, 1)),
-	assert(ubicacion(2, 1)),
-	assert(ubicacion(3, 1)),
-	assert(ubicacion(4, 1)),
+	assertz(ubicacion(1, 1)),
+	assertz(ubicacion(2, 1)),
+	assertz(ubicacion(3, 1)),
+	assertz(ubicacion(4, 1)),
 	retractall(finDeJuego),
 	retractall(tiradas(_)),
-	assert(tiradas(1)),
-	retractall(turnosSinJugar(_,_)),
-	assert(turnosSinJugar(1, 0)),
-	assert(turnosSinJugar(2, 0)),
-	assert(turnosSinJugar(3, 0)),
-	assert(turnosSinJugar(4, 0)),
-	retractall(carcel(_)).
+	assertz(tiradas(1)),
+	retractall(estado_jugador(_,_)),
+	assertz(estado_jugador(1, ready)),
+	assertz(estado_jugador(2, ready)),
+	assertz(estado_jugador(3, ready)),
+	assertz(estado_jugador(4, ready)).
 
 % Usaremos este predicado en todas las secciones del menú para liberar
 % las imágenes previas, etc... 
@@ -195,7 +195,7 @@ menu_principal:-
 	free(@salir),
 	free(@config),
 	
-	new(Menu, window('El Juego de la OCA: Menú Principal', size(800, 600))),      % Ventana principal
+	fixed_window('El Juego de la OCA: Menú Principal', size(800, 600), Menu),
 	
 	% Imprimimos las imágenes del menú principal en sus respectivas posiciones
 	imagen(Menu, @menu, menu, point(0,0)),
@@ -277,7 +277,7 @@ remenu2:-
 	
 	free_menu, 
 	
-	new(Menu, window('El Juego de la OCA: Menú Principal', size(800, 600))),
+	fixed_window('El Juego de la OCA: Menú Principal', size(800, 600), Menu),
 	
 	imagen(Menu, @menu, menu, point(0,0)),
 	imagen(Menu, @mprincipal, iniciar, point(33, 186)),
@@ -402,7 +402,7 @@ load_textitem(Num, Menu):-
 	atom_concat('Jugador ', Num, Label),
 	
 	send(Menu, display, new(Var, text_item(Label)), point(X, Y)),
-	send(Var, length, 40),      
+	send(Var, length, 20),
 	send(Var, editable, true). 
 
 % Con este predicado hacemos que un cuadro de texto no sea editable, por
@@ -455,37 +455,51 @@ load_start(Menu):-
 % Introducimos el número de jugadores que harán uso de la partida
 
 num_jugadores(Num):-
-	
+	must_be(integer, Num),
+	(   between(2, 4, Num)
+	->  true
+	;   domain_error(player_count, Num)
+	),
 	retractall(numjug(_)),
-	assert(numjug(Num)).
+	assertz(numjug(Num)).
 
-% Añadimos los nombres de los jugadores. Este predicado se usará desde
-% XPCE, por lo tanto se define para cada una de las posibilidades. Tanto
-% como si hay 2, 3 o 4 jugadores, los añadimos todos a la base de
-% conocimientos
+% Valida y reemplaza la configuración completa de jugadores de forma atómica.
+% Los colores coinciden ahora con las fichas que se dibujan en el tablero.
 
-% NOTA: la propiedad de color de namejugador/3 es trivial
+insert_jugador(Num, P1, P2, P3, P4):-
+	oca_rules:prepare_players(Num, [P1, P2, P3, P4], Players),
+	retractall(namejugador(_, _, _)),
+	forall(member(player(Id, Name, Colour, _), Players),
+	       assertz(namejugador(Id, Name, Colour))),
+	fill_unused_players(Num).
 
-insert_jugador(2, P1, P2, _, _):-
-	
-	assert(namejugador(1, P1, 'rojo')),
-	assert(namejugador(2, P2, 'rojo')),
-	assert(namejugador(3, '', '')),
-	assert(namejugador(4, '', '')).
+fill_unused_players(Num):-
+	forall(between(1, 4, Id),
+	       (   Id =< Num
+	       ->  true
+	       ;   assertz(namejugador(Id, '', ''))
+	       )).
 
-insert_jugador(3, P1, P2, P3, _):-
-	
-	assert(namejugador(1, P1, 'rojo')),
-	assert(namejugador(2, P2, 'rojo')),
-	assert(namejugador(3, P3, 'rojo')),
-	assert(namejugador(4, '', '')).
+start_configured_game(Menu, Num, P1, P2, P3, P4):-
+	catch(( insert_jugador(Num, P1, P2, P3, P4),
+	        go,
+	        send(Menu, destroy)
+	      ),
+	      Error,
+	      report_configuration_error(Error)).
 
-insert_jugador(4, P1, P2, P3, P4):-
-	
-	assert(namejugador(1, P1, 'rojo')),
-	assert(namejugador(2, P2, 'rojo')),
-	assert(namejugador(3, P3, 'rojo')),
-	assert(namejugador(4, P4, 'rojo')).
+report_configuration_error(Error):-
+	configuration_error_message(Error, Message),
+	send(@display, inform, Message).
+
+configuration_error_message(error(domain_error(non_empty_player_name, _), _),
+			    'Todos los jugadores necesitan un nombre.') :- !.
+configuration_error_message(error(domain_error(player_name_max_20_characters, _), _),
+			    'Los nombres pueden tener como máximo 20 caracteres.') :- !.
+configuration_error_message(error(domain_error(unique_player_names, _), _),
+			    'Los nombres de los jugadores deben ser distintos.') :- !.
+configuration_error_message(Error, Message):-
+	message_to_string(Error, Message).
 	
 % Por último, creamos la pantalla de configuración, usando todas las
 % reglas anteriores
@@ -517,12 +531,10 @@ config(Menu):-
 	% También destruye la ventana actual
 	
 	send(Menu, display, new(@submit, button('Iniciar juego',
-						and(
-						    message(@prolog, insert_jugador, @numJug?selection,
-							    @labelj1?value, @labelj2?value, 
-							    @labelj3?value, @labelj4?value),
-						    message(@prolog, go),
-						    message(Menu, destroy)))),
+						message(@prolog, start_configured_game, Menu,
+							@numJug?selection,
+							@labelj1?value, @labelj2?value,
+							@labelj3?value, @labelj4?value))),
 	     point(29, 480)).
 
 
@@ -542,7 +554,7 @@ go :-
 	inicializar,
 	
 	% Creamos la ventana donde irá nuestro tablero y todo lo demás
-	new(Oca, window('Juego de la Oca', size(1000, 566))),
+	fixed_window('Juego de la Oca', size(1000, 566), Oca),
 	
 	% Liberamos variables
 	free_all,
@@ -651,12 +663,12 @@ crear_fichas(Oca):-
 	
 	numjug(NumJug),
 	
-	(   NumJug=2
+	(   NumJug =:= 2
 	->  borrar_fichas(3),
 	    borrar_fichas(4)
-	;   NumJug=3
+	;   NumJug =:= 3
 	->  borrar_fichas(4)
-	;   nada(_)
+	;   true
 	).
 
 % Predicado para borrar las fichas que no vayan a ser utilizadas
@@ -672,74 +684,6 @@ borrar_fichas(4):-
 	
 	free(@fichaj4),
 	free(@fichaj42).
-
-% Coordenadas base de cada casilla dentro del tablero
-% Más tarde se utilizarán para calcular la posición dentro de las mismas
-
-coords(0,0,0).
-coords(1, 14, 22).
-coords(2, 14, 102).
-coords(3, 14, 190).
-coords(4, 14, 263).
-coords(5, 14, 339).
-coords(6, 14, 425).
-coords(7, 14, 498).
-coords(8, 96, 501).
-coords(9, 175, 501).
-coords(10, 252, 501).
-coords(11, 339, 501).
-coords(12, 420, 501).
-coords(13, 504, 501).
-coords(14, 579, 501).
-coords(15, 658, 501).
-coords(16, 661, 422).
-coords(17, 661, 343).
-coords(18, 661, 259).
-coords(19, 661, 184).
-coords(20, 661, 98).
-coords(21, 661, 22).
-coords(22, 579, 22).
-coords(23, 495, 22).
-coords(24, 415, 22).
-coords(25, 333, 22).
-coords(26, 252, 22).
-coords(27, 175, 22).
-coords(28, 92, 22).
-coords(29, 92, 99).
-coords(30, 92, 175).
-coords(31, 92, 260).
-coords(32, 92, 340).
-coords(33, 94, 421).
-coords(34, 177, 421).
-coords(35, 256, 421).
-coords(36, 337, 421).
-coords(37, 416, 421).
-coords(38, 499, 421).
-coords(39, 581, 421).
-coords(40, 581, 346).
-coords(41, 581, 258).
-coords(42, 581, 177).
-coords(43, 581, 99).
-coords(44, 498, 99).
-coords(45, 416, 99).
-coords(46, 336, 99).
-coords(47, 253, 99).
-coords(48, 171, 99).
-coords(49, 171, 178).
-coords(50, 171, 256).
-coords(51, 171, 341).
-coords(52, 251, 341).
-coords(53, 335, 341).
-coords(54, 419, 341).
-coords(55, 500, 341).
-coords(56, 500, 252).
-coords(57, 500, 180).
-coords(58, 413, 180).
-coords(59, 339, 180).
-coords(60, 254, 180).
-coords(61, 254, 258).
-coords(62, 333, 258).
-coords(63, 438, 273).
 
 % Las coordenadas que debemos sumar a cada cuadro de casilla para
 % colocar las fichas dentro de la cuadrícula de modo correcto
@@ -793,8 +737,7 @@ cara_dado(Num, Resource):-
 % Obtener un número al azar del 1 al 6 // From: Fases OCA
 
 dados(X):-
-	
-	X is random(6)+1.
+	random_between(1, 6, X).
 
 % Utilizamos este predicado para enviar texto al log de la OCA
 
@@ -819,7 +762,13 @@ send_prolog(Msg1, Msg2, Msg3, Msg4, Msg5, Msg6):-
 %
 % *************************************
 
-empezar_todo(_):-finDeJuego.   % Si está seteado el finDeJuego/0 no hace nada.
+empezar_todo(_):-
+	finDeJuego,
+	!.
+empezar_todo(Oca):-
+	turno(none),
+	!,
+	send_log('No hay jugadores disponibles para continuar.', '', '', '', '', '', Oca).
 empezar_todo(Oca):-
 	
 	% Liberamos la ficha fantasma y la volvemos a crear para moverla posteriormente
@@ -833,7 +782,7 @@ empezar_todo(Oca):-
 	
 	TiradasNew is Tiradas+1,
 	retractall(tiradas(_)),
-	assert(tiradas(TiradasNew)),
+	assertz(tiradas(TiradasNew)),
 
 	free(@dado),
 	
@@ -842,15 +791,10 @@ empezar_todo(Oca):-
 	
 	dados(N),
 	
-	% Comprobamos si el usuario ha pasado de largo por la casilla de la cárcel
-	% y llamamos a una regla que nos libera de la cárcel a aquellos que estuvieran
+	% Liberamos a todos los jugadores encarcelados si se cruza la casilla 52.
 	ubicacion(TurnoA, CarcelP),
 	newpos(CarcelP, N, NewPossC),
-	
-	salir_carcel(1, CarcelP, NewPossC),
-	salir_carcel(2, CarcelP, NewPossC),
-	salir_carcel(3, CarcelP, NewPossC),
-	salir_carcel(4, CarcelP, NewPossC),	
+	release_jailed_players(CarcelP, NewPossC),
 	
 	% Imprimimos la cara del dado correspondiende
 	cara_dado(N, Imagen),
@@ -890,6 +834,10 @@ barras_turno(4, 771, 149).
 
 % Regla que cambia las barras de turno
 
+cambia_token(none, Oca):-
+	!,
+	send(@actual, destroy),
+	imagen(Oca, @actual, actual, point(0, 0)).
 cambia_token(Siguiente, Oca):-
 
 	barras_turno(Siguiente, X, Y),
@@ -933,43 +881,63 @@ ganador_imagen(IDplayer, Oca):-
 % sobrepase de la casilla 63
 
 newpos(PosA,N,NewPos):-
-	
-	(   PosA+N>63
-	->  NewPos is 63- (PosA+N-63)
-	;   NewPos is PosA+N
-	).
+	oca_rules:new_position(PosA, N, NewPos).
 
 % Regla para mover al jugador X posiciones
 
 moveplayer(Jug,N):-
 	
         ubicacion(Jug, X),
-	(   X=63
-	->  NewPos=63
+	(   X =:= 63
+	->  NewPos = 63
 	;   newpos(X, N, NewPos)
 	),
-	
-        retract(ubicacion(Jug, X)),
-        assert(ubicacion(Jug, NewPos)).
+	retractall(ubicacion(Jug, _)),
+	assertz(ubicacion(Jug, NewPos)).
 
 % Mover un jugador a una casilla determinada
 
 moveplayer_casilla(Jug, N):-
-	
-	ubicacion(Jug, X),
-	retract(ubicacion(Jug, X)),
-	assert(ubicacion(Jug, N)).
+	retractall(ubicacion(Jug, _)),
+	assertz(ubicacion(Jug, N)).
 
 % Calcular el siguiente jugador en base al total de jugadores
 
 siguiente_jugador(Actual,Siguiente):-
-	
-	numjug(Act),
-	
-	(   Actual is Act
-	->  Siguiente is 1
-	;   Siguiente is Actual+1
-	).
+	numjug(NumJugadores),
+	oca_rules:next_player(Actual, NumJugadores, Siguiente).
+
+set_player_status(Player, Status):-
+	must_be(integer, Player),
+	(   between(1, 4, Player)
+	->  true
+	;   domain_error(player_number, Player)
+	),
+	oca_rules:valid_player_status(Status),
+	retractall(estado_jugador(Player, _)),
+	assertz(estado_jugador(Player, Status)).
+
+active_player_statuses(Statuses):-
+	numjug(NumJugadores),
+	findall(Player-Status,
+	        ( between(1, NumJugadores, Player),
+	          estado_jugador(Player, Status)
+	        ),
+	        Statuses).
+
+apply_player_statuses([]).
+apply_player_statuses([Player-Status|Statuses]):-
+	set_player_status(Player, Status),
+	apply_player_statuses(Statuses).
+
+advance_turn(Current, Next):-
+	numjug(NumJugadores),
+	active_player_statuses(Statuses0),
+	oca_rules:next_playable_player(Current, NumJugadores,
+	                               Statuses0, Next, Statuses),
+	apply_player_statuses(Statuses),
+	retractall(turno(_)),
+	assertz(turno(Next)).
 
 % *** Salir de la cárcel ***
 % 
@@ -981,20 +949,16 @@ siguiente_jugador(Actual,Siguiente):-
 % **************************
 
 salir_carcel(IDplayer, PossAct, Next):-
-	
-	turnosSinJugar(IDplayer, T),
-	
-	(   PossAct<52
-	->  (   Next>52
-	    ->  (   T>50
-		->  retractall(turnosSinJugar(IDplayer, _)),
-		    assert(turnosSinJugar(IDplayer, 0))
-		;   nada(_)
-		)
-	    ;   nada(_)
-	    )
-	;   nada(_)
+	(   oca_rules:crosses_jail(PossAct, Next),
+	    estado_jugador(IDplayer, jailed)
+	->  set_player_status(IDplayer, ready)
+	;   true
 	).
+
+release_jailed_players(PossAct, Next):-
+	numjug(NumJugadores),
+	forall(between(1, NumJugadores, Player),
+	       salir_carcel(Player, PossAct, Next)).
 
 	
 
@@ -1016,7 +980,7 @@ salir_carcel(IDplayer, PossAct, Next):-
 meta(IDplayer, Oca):-
 	
 	animar_oca(Oca),
-	assert(finDeJuego),
+	( finDeJuego -> true ; assertz(finDeJuego) ),
 
         namejugador(IDplayer, Name, _),
         tiradas(Tiradas),
@@ -1036,11 +1000,7 @@ meta_oca(IDplayer, Oca):-
 % Predicado para calcular la siguiente OCA
 
 siguiente_oca(Actual, Siguiente):-
-	
-	casillajug(Siguiente, Casilla),
-	
-	Siguiente > Actual,
-	(Casilla=oca;Casilla=meta), !.
+	oca_rules:next_goose(Actual, Siguiente).
 
 % *** Evento de la OCA ***
 % 
@@ -1081,9 +1041,7 @@ calavera(IDplayer, Oca):-
 % Calculamos el siguiente puente en base a la posición actual
 
 siguiente_puente(Actual, Siguiente):-
-	
-	casillajug(Siguiente, puente),
-	Siguiente \= Actual.
+	oca_rules:paired_square(puente, Actual, Siguiente).
 
 % *** Evento del Puente ***
 % 
@@ -1110,9 +1068,7 @@ puente(IDplayer, Oca):-
 % Calculamos la siguiente posición de los dados
 
 siguiente_dados(Actual, Siguiente):-
-	
-	casillajug(Siguiente, losdados),
-	Siguiente \= Actual.
+	oca_rules:paired_square(losdados, Actual, Siguiente).
 
 % *** Evento de los Dados ***
 % 
@@ -1150,28 +1106,7 @@ laberinto(IDplayer, Oca):-
 	send_log('"', Name, '" se pierde en el laberinto\ny vuelve a la casilla 30\n', '', '\n\n', '', Oca),
 	
 	moveplayer_casilla(IDplayer, 30),
-	
-	turno(TurnoA),
-	
-	% *** Comprobar si el siguiente jugador está bloqueado ***
-	% Desde aquí comprobamos si el siguiente jugador no está bloqueado
-	% (sin turno), en caso afirmativo, le pasamos el turno al siguiente
-	% ********************************************************
-	
-	siguiente_jugador(TurnoA, SiguienteJugador),
-	turnosSinJugar(SiguienteJugador, SinJugar),
-	siguiente_jugador(SiguienteJugador, SigSigJugador),
-	
-	(   SinJugar>0
-	->  Turno=SigSigJugador,
-	    NuevosTurnos is SinJugar-1,
-	    retract(turnosSinJugar(SiguienteJugador, _)),
-	    assert(turnosSinJugar(SiguienteJugador, NuevosTurnos))
-	;   Turno=SiguienteJugador
-	),
-	
-	retractall(turno(_)),
-	assert(turno(Turno)).	
+	advance_turn(IDplayer, _).
 
 % *** Evento de la Posada ***
 % 
@@ -1185,17 +1120,13 @@ posada(IDplayer, Oca):-
 	
 	animar_oca(Oca),
 	
-	retract(turnosSinJugar(IDplayer, _)),
-	assert(turnosSinJugar(IDplayer, 1)),   % Introducimos 1 turno sin jugar para este jugador
+	set_player_status(IDplayer, skip(1)),
 	
 	namejugador(IDplayer, Name, _),
 	
 	send_log('"', Name, '" ha caido en la posada\ny estará 1 turno sin jugar. ','', '', '', Oca),
 	
-	siguiente_jugador(IDplayer, SiguienteJugador),
-	
-	retractall(turno(_)),
-	assert(turno(SiguienteJugador)).
+	advance_turn(IDplayer, _).
 
 % *** Evento del Pozo ***
 % 
@@ -1207,23 +1138,18 @@ pozo(IDplayer, Oca):-
 	
 	animar_oca(Oca),
 	
-	retract(turnosSinJugar(IDplayer, _)),
-	assert(turnosSinJugar(IDplayer, 2)),
+	set_player_status(IDplayer, skip(2)),
 	
 	namejugador(IDplayer, Name, _),
 	
 	send_log('"', Name, '" ha caido en el pozo\ny estará 2 turnos sin jugar =( ','', '', '', Oca),
 	
-	siguiente_jugador(IDplayer, SiguienteJugador),
-	
-	retractall(turno(_)),
-	assert(turno(SiguienteJugador)).
+	advance_turn(IDplayer, _).
 
 % *** Evento de la Cárcel ***
 % 
-% Cuando un jugador caiga en la cárcel, le pondremos 999 turnos sin poder tirar, es
-% decir, hasta que no se le borren esa barbaridad de turnos, no podrá moverse. 
-% Los turnos se borran con el predicado salir_carcel/3
+% Un jugador encarcelado permanece en estado `jailed` hasta que otro jugador
+% cruce la casilla 52. No se usa un número mágico de turnos.
 % 
 % ***************************
 
@@ -1231,17 +1157,13 @@ lacarcel(IDplayer, Oca):-
 	
 	animar_oca(Oca),
 	
-	retract(turnosSinJugar(IDplayer, _)),
-	assert(turnosSinJugar(IDplayer, 999)),    % 999 Turnos sin tirar
+	set_player_status(IDplayer, jailed),
 	
 	namejugador(IDplayer, Name, _),
 	
 	send_log('"', Name, '" está encerrado en la cárcel\ny saldrá cuando alguien pase \npor esa posición =( ','', '', '', Oca),
 	
-	siguiente_jugador(IDplayer, SiguienteJugador),
-	
-	retractall(turno(_)),
-	assert(turno(SiguienteJugador)).	
+	advance_turn(IDplayer, _).
 	
 % *** Evento sin acción ***
 % 
@@ -1252,7 +1174,7 @@ lacarcel(IDplayer, Oca):-
 % 
 % *************************
 
-noact(_, Oca):-
+noact(IDplayer, Oca):-
 	
 	% Quitamos a la OCA parlante y dibujamos la normal, ya que en casilla normal
 	% la OCA no habla
@@ -1261,89 +1183,8 @@ noact(_, Oca):-
 	
 	imagen(Oca, @ocan, oca_gif, point(865, 390)),
 	
-	turno(TurnoA),
-	
-	siguiente_jugador(TurnoA, SiguienteJugador),
-	turnosSinJugar(SiguienteJugador, SinJugar),
-	siguiente_jugador(SiguienteJugador, SigSigJugador),
-	
-	(   SinJugar>0
-	->  Turno=SigSigJugador,
-	    NuevosTurnos is SinJugar-1,
-	    retract(turnosSinJugar(SiguienteJugador, _)),
-	    assert(turnosSinJugar(SiguienteJugador, NuevosTurnos))
-	;   Turno=SiguienteJugador
-	),
-	
-	retractall(turno(_)),
-	assert(turno(Turno)).
+	advance_turn(IDplayer, _).
 	    
-% Definimos a cada casilla un evento
-
-casillajug(1, noact).
-casillajug(2, noact).
-casillajug(3, noact).
-casillajug(4, noact).
-casillajug(5, oca).
-casillajug(6, puente).
-casillajug(7, noact).
-casillajug(8, noact).
-casillajug(9, oca).
-casillajug(10, noact).
-casillajug(11, noact).
-casillajug(12, puente).
-casillajug(13, noact).
-casillajug(14, oca).
-casillajug(15, noact).
-casillajug(16, noact).
-casillajug(17, noact).
-casillajug(18, oca).
-casillajug(19, posada).
-casillajug(20, noact).
-casillajug(21, noact).
-casillajug(22, noact).
-casillajug(23, oca).
-casillajug(24, noact).
-casillajug(25, noact).
-casillajug(26, losdados).
-casillajug(27, oca).
-casillajug(28, noact).
-casillajug(29, noact).
-casillajug(30, noact).
-casillajug(31, pozo).
-casillajug(32, oca).
-casillajug(33, noact).
-casillajug(34, noact).
-casillajug(35, noact).
-casillajug(36, oca).
-casillajug(37, noact).
-casillajug(38, noact).
-casillajug(39, noact).
-casillajug(40, noact).
-casillajug(41, oca).
-casillajug(42, laberinto).
-casillajug(43, noact).
-casillajug(44, noact).
-casillajug(45, oca).
-casillajug(46, noact).
-casillajug(47, noact).
-casillajug(48, noact).
-casillajug(49, noact).
-casillajug(50, oca).
-casillajug(51, noact).
-casillajug(52, lacarcel).
-casillajug(53, losdados).
-casillajug(54, oca).
-casillajug(55, noact).
-casillajug(56, noact).
-casillajug(57, noact).
-casillajug(58, calavera).
-casillajug(59, meta_oca).
-casillajug(60, noact).
-casillajug(61, noact).
-casillajug(62, noact).
-casillajug(63, meta).
-
 % Por último, la regla que llama a los eventos en cuanto un usuario cae en
 % ellos
 
